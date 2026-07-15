@@ -1,0 +1,16 @@
+# Original SWF and extraction dumps — local reference material, never published.
+# (Anchored with a leading slash so game/assets/ is NOT ignored.)
+/Gold-Miner.swf
+/assets/
+/assets_gif/
+/assets_gif2/
+/assets_png/
+/ffdec/
+
+# Reference screenshots of the original game (local evidence only)
+/1.png
+/2.png
+/3.png
+
+# Local dev/verification artifacts (layout-compare handoff, see AGENTS.md §10)
+/game/_*

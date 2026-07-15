@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>黄金矿工 H5</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="wrap">
+    <canvas id="cv" width="715" height="520" aria-label="黄金矿工游戏画面"></canvas>
+    <p id="tip">↓/空格 = 发射 · ↑ = 使用炸药 · Esc / P = 暂停 · M = 静音</p>
+    <div id="boot-error" hidden></div>
+  </main>
+  <script>
+    // 模块图加载失败时页面会静默空白（只剩背景色）：把脚本错误显式亮出来。
+    (function () {
+      function show(message) {
+        var box = document.getElementById('boot-error');
+        box.hidden = false;
+        box.textContent = '页面脚本加载失败：' + message
+          + ' —— 请确认通过 http:// 静态服务器访问（不能用 file://），并尝试强制刷新（Ctrl+F5）清掉旧缓存的模块。';
+      }
+      window.addEventListener('error', function (event) {
+        if (event.target && event.target.tagName === 'SCRIPT') {
+          show('无法加载 ' + (event.target.src || '脚本'));
+        } else if (event.message) {
+          show(event.message);
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        show(String(event.reason));
+      });
+    })();
+  </script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
