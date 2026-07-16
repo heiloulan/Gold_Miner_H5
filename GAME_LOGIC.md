@@ -160,6 +160,12 @@ Notes:
   so rock/diamond buffs apply to every such object in the level.
 - Grabbing the TNT crate (object 9) is essentially a \$1 booby prize with a bang; the claw
   reveal (claw frame 10) shows an explosion with spark particles.
+- The explosion clip (sprite 263) does area damage on its own: frame 9 places an invisible
+  sensor (sprite 262 → shape 53, bounds `[-6.2,6.2]²`, matrix a=6.9598 d=6.2580 tx=0.3
+  ty=-1.75; removed at frame 14) whose `enterFrame` loops `x = 1../:things` and calls
+  `eval("_root.T"+x).gotoAndStop(2)` on any `T{x}.ob.box` it hitTests — items vanish with
+  no payout. A TNT crate hit this way chains (its frame 2 *is* the explosion). The sensor
+  inherits the explosion instance scale: TNT crate ×2.2416, dynamite blast ×0.4495.
 
 ### Walking moles (sprites 317 / 319, inside wrappers 318 / 320)
 

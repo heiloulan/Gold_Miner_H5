@@ -176,6 +176,18 @@ export const CLAW_REG = Object.freeze([-74.8, -40.9, 148.9, 138.7]);
 export const EXPLOSION_REG = Object.freeze([-66.3, -61.2, 130.5, 122.4]);
 export const EXPLOSION_SCALE = Object.freeze({ tnt: 2.2416, dynamite: 0.4495 });
 
+// 爆炸范围伤害：原版爆炸剪辑（Sprite 263）第 9 帧在 depth 16 放置隐形传感器
+// Sprite 262（内含 Shape 53，边界 [-6.2,6.2]²；放置矩阵 a=6.9598 d=6.2580
+// tx=0.3 ty=-1.75），第 14 帧移除。存在期间每帧对全场 T{x}.ob.box 做 hitTest，
+// 命中即 gotoAndStop(2)——原地消失、不给钱；TNT 木箱的第 2 帧本身就是爆炸,
+// 因此会引发连锁爆炸。rect 为单位爆炸缩放下的原版像素，
+// 实际判定时按 boom.scale × SWF_SCALE 放大、以爆炸中心为原点。
+export const BLAST = Object.freeze({
+  firstFrame: 8, // 0 起算；对应 SWF 第 9 帧
+  lastFrame: 12, // SWF 第 14 帧移除 → 第 13 帧仍生效
+  rect: Object.freeze({ xMin: -42.85, xMax: 43.45, yMin: -40.55, yMax: 37.05 }),
+});
+
 // 摆动/下放期的空爪、炸药销毁后的空爪。
 export const CLAW_ASSETS = Object.freeze({ open: 'claw_open', empty: 'claw_empty' });
 

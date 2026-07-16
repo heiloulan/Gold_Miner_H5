@@ -212,7 +212,7 @@ All animations are declared centrally in `manifest.js` as `{ frames, fps, mode, 
 
 Normal pulling must never read `dynamite` frames. Using dynamite freezes the reel; around frame 3 the current object is destroyed without scoring, and after frame 5 the empty hook resumes retracting. The miner plays the `pull` loop during any retraction (including empty hook and abort).
 
-The TNT crate (`tnt`) is a normal catch: hooking it plays a one-shot explosion effect in place and reels back `$1` as usual. There is **no area chain damage** — do not reintroduce a chained `explode()`.
+The TNT crate (`tnt`) is a normal catch: hooking it plays a one-shot explosion effect in place and reels back `$1` as usual. The explosion clip itself carries the area damage: original Sprite 263 places an invisible sensor (Sprite 262 → Shape 53) on frames 9–13 that destroys every field item whose box it touches (no money awarded); a TNT crate destroyed this way explodes in turn (its frame 2 *is* the explosion), producing authentic chain reactions. Hooked items are immune (their field body is already hidden). H5: `config.BLAST` + `applyBlastDamage()` in `update.js`; the blast rect scales with `boom.scale × SWF_SCALE`, so dynamite blasts (×0.4495) have a much smaller radius than TNT blasts (×2.2416).
 
 Composite source offsets: idle `(29,43)`, pull/dynamite `(28,10)`, yay `(31,0)`, platform `(0,270)`. Do not bottom-center each frame image individually, or clips will jitter horizontally or float.
 

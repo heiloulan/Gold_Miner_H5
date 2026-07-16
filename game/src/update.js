@@ -1,10 +1,12 @@
 import {
+  BLAST,
   EXPLOSION_SCALE,
   HOOK,
   MOLE,
   PIVOT,
   SHOP_LEAVE,
   STAGE,
+  SWF_SCALE,
   SWING,
   TYPE_DEFS,
   itemValue,
@@ -218,7 +220,8 @@ function updateHook(state, dt, sound) {
       if (!item.alive || item.hooked) continue;
       if (!pointInHitbox(tip, item, TYPE_DEFS[item.type].hitbox)) continue;
       // 原版 TNT 木箱（object 9）也是正常抓取：原地播放爆炸（Sprite 331 帧 2 +
-      // 声音 264），钩子照样拖回 $1 的安慰奖，没有范围连锁伤害。
+      // 声音 264），钩子照样拖回 $1 的安慰奖；范围伤害由爆炸剪辑自身的
+      // 传感器帧承担（见 applyBlastDamage / config.BLAST）。
       if (item.type === 'tnt') {
         state.effects.booms.push({ x: item.x, y: item.y, elapsed: 0, scale: EXPLOSION_SCALE.tnt });
         sound('explosion');
@@ -275,10 +278,39 @@ function updateWorld(state, dt) {
   }
 }
 
-function updateEffects(state, dt) {
+// 传感器帧窗口内（SWF 第 9–13 帧）逐 tick 做 AABB 判定，命中的物件原地消失、
+// 不给钱；被波及的 TNT 木箱按原版 gotoAndStop(2) 语义再次爆炸，形成连锁。
+// 被钩住的物件豁免——原版抓取瞬间场上本体已 gotoAndStop(2) 隐藏，box 不存在。
+function applyBlastDamage(state, boom, sound) {
+  const frame = Math.floor(boom.elapsed * ANIMATIONS.explosion.fps);
+  if (frame < BLAST.firstFrame || frame > BLAST.lastFrame) return;
+  const k = boom.scale * SWF_SCALE;
+  const xMin = boom.x + BLAST.rect.xMin * k;
+  const xMax = boom.x + BLAST.rect.xMax * k;
+  const yMin = boom.y + BLAST.rect.yMin * k;
+  const yMax = boom.y + BLAST.rect.yMax * k;
+  for (const item of state.world.items) {
+    if (!item.alive || item.hooked) continue;
+    const box = TYPE_DEFS[item.type].hitbox;
+    if (item.x + box.halfW < xMin || item.x - box.halfW > xMax
+      || item.y + box.halfH < yMin || item.y - box.halfH > yMax) continue;
+    item.alive = false;
+    if (item.type === 'tnt') {
+      state.effects.booms.push({ x: item.x, y: item.y, elapsed: 0, scale: EXPLOSION_SCALE.tnt });
+      sound('explosion');
+    }
+  }
+}
+
+function updateEffects(state, dt, sound) {
   state.effects.popups.forEach(popup => { popup.elapsed += dt; });
   state.effects.popups = state.effects.popups.filter(popup => popup.elapsed < 1.2);
-  state.effects.booms.forEach(boom => { boom.elapsed += dt; });
+  // 索引循环：连锁爆炸会在遍历中追加新 boom，其传感器要到自身第 9 帧才激活。
+  for (let i = 0; i < state.effects.booms.length; i++) {
+    const boom = state.effects.booms[i];
+    boom.elapsed += dt;
+    applyBlastDamage(state, boom, sound);
+  }
   // 原版爆炸 Sprite 263 共 14 帧（18 FPS ≈ 0.78 s）。
   const boomDuration = ANIMATIONS.explosion.frames.length / ANIMATIONS.explosion.fps;
   state.effects.booms = state.effects.booms.filter(boom => boom.elapsed < boomDuration);
@@ -324,7 +356,7 @@ export function updateGame(state, dt, sound = () => {}) {
     state.run.overElapsed += delta;
     return;
   }
-  updateEffects(state, delta);
+  updateEffects(state, delta, sound);
   updateMinerAnimation(state, delta);
   if (state.scene !== 'play') return;
 

@@ -120,6 +120,49 @@ test('炸药阶段暂停收绳，单独播放并销毁物件且不计分', () =>
   assert.ok(state.hook.extension < 100, '动画结束后空钩继续收回');
 });
 
+test('爆炸传感器帧（SWF 9–13）范围销毁周边物件且不计分，被钩物件豁免', () => {
+  const state = createGameState({ rng: createRng(7) });
+  state.scene = 'play';
+  state.run.time = 60;
+  // TNT 爆炸（scale 2.2416）半宽 ≈ 43.15×2.2416×1.3 ≈ 125.7 H5 px。
+  const near = { type: 'gold_small', x: 460, y: 300, alive: true, hooked: false };
+  const far = { type: 'gold_big', x: 40, y: 300, alive: true, hooked: false };
+  const hooked = { type: 'gold_mid', x: 400, y: 310, alive: true, hooked: true };
+  state.world.items = [near, far, hooked];
+  state.effects.booms.push({ x: 400, y: 300, elapsed: 0, scale: 2.2416 });
+
+  const sounds = [];
+  // 第 9 帧（8/18 s ≈ 0.444 s）前无伤害。
+  for (let i = 0; i < 8; i++) updateGame(state, 0.05, key => sounds.push(key));
+  assert.equal(near.alive, true, '传感器出现前不销毁');
+  updateGame(state, 0.05, key => sounds.push(key));
+  assert.equal(near.alive, false, '传感器帧内销毁近处物件');
+  assert.equal(far.alive, true, '范围外物件不受影响');
+  assert.equal(hooked.alive, true, '被钩住的物件豁免（原版场上本体已隐藏）');
+  assert.equal(state.run.score, 0, '被炸毁的物件不给钱');
+});
+
+test('被波及的 TNT 木箱连锁爆炸并播放爆炸音', () => {
+  const state = createGameState({ rng: createRng(7) });
+  state.scene = 'play';
+  state.run.time = 60;
+  const crate = { type: 'tnt', x: 460, y: 300, alive: true, hooked: false };
+  const distant = { type: 'gold_big', x: 660, y: 300, alive: true, hooked: false };
+  state.world.items = [crate, distant];
+  state.effects.booms.push({ x: 400, y: 300, elapsed: 0, scale: 2.2416 });
+
+  const sounds = [];
+  for (let i = 0; i < 10; i++) updateGame(state, 0.05, key => sounds.push(key));
+  assert.equal(crate.alive, false, '木箱被第一波爆炸销毁');
+  assert.equal(state.effects.booms.length >= 2, true, '木箱自身再次爆炸');
+  assert.ok(sounds.includes('explosion'), '连锁爆炸播放 264 号爆炸音');
+  assert.equal(distant.alive, true, '连锁传感器尚未激活时远处物件保留');
+  // 继续推进让连锁爆炸的传感器帧（自身第 9–13 帧）也走完：
+  // distant 距连锁中心 200 px，超出半宽 126.6+30.6，不应被波及。
+  for (let i = 0; i < 10; i++) updateGame(state, 0.05, () => {});
+  assert.equal(distant.alive, true, '超出连锁爆炸范围的物件始终保留');
+});
+
 test('无炸药或未抓住物件时不能进入投掷状态', () => {
   const state = createGameState({ rng: createRng(5) });
   state.scene = 'play';
